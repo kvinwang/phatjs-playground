@@ -9,15 +9,34 @@ This is a smart contract designed to run on the Phala [Phat Contract](https://ph
 To prove the execution of a piece of code, call the `prove_output` method with the JavaScript code as the argument. The contract will execute the code and return the execution result and the hash of the code.
 
 ```rust
-let result = contract.prove_output(js_code, args, commit_code);
-```
+let js_code = r#"
+(function(){
+    const token = scriptArgs[0];
+    const message = scriptArgs[1];
+    const response = pink.httpRequest({
+        url: 'https://api.github.com/user',
+        headers: {
+            'Accept': 'application/vnd.github+json',
+            'Authorization': 'Bearer ' + token,
+            'X-GitHub-Api-Version': '2022-11-28',
+            'User-Agent': 'Phat-Script',
+        },
+        method: 'GET',
+        returnTextBody: true,
+    });
+    const json = JSON.parse(response.body);
+    return `Proven owned github user ${json.login}, date: ${response.headers.date}, message: ${message}`;
+}())
+"#;
 
-### Retrieving the Public Key
+let ProvenOutput {
+    code_hash,
+    output,
+    signature,
+} = contract.prove_output(js_code, vec!["<Your Github Access Token>".into(), "Moon".into()]).unwrap();
 
-To retrieve the public key associated with the contract, call the `pubkey` method.
-
-```rust
 let pubkey = contract.pubkey();
+assert!(sr25519::verify(&pubkey, &signature, &(&code_hash, &output).encode()).is_ok());
 ```
 
 ## Application Scenario
