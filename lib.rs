@@ -2,8 +2,6 @@
 //! This is a smart contract running on the Phala Phat Contract platform.
 //! It provides a proof of code execution. When the user calls the `prove_output` method and passes in a piece of JavaScript code,
 //! the contract executes this code and outputs the execution result and the hash of the code as the result.
-//!
-//! Application scenario: It can be used to prove the identity, assets, and behavior records of users on centralized platforms.
 
 extern crate alloc;
 
@@ -24,12 +22,10 @@ mod proven {
     }
 
     #[ink(storage)]
-    /// Main contract struct.
     pub struct Proven {}
 
     impl Proven {
         #[ink(constructor)]
-        /// Default constructor.
         pub fn default() -> Self {
             Self {}
         }
@@ -95,7 +91,7 @@ mod proven {
         }
     }
     impl Proven {
-        /// Returns the derived key.
+        /// Returns the key used to sign the execution result.
         fn key(&self) -> Vec<u8> {
             pink::ext().derive_sr25519_key(b"signer"[..].into())
         }
