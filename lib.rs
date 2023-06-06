@@ -56,7 +56,7 @@ mod proven {
             };
             let code_hash = self
                 .env()
-                .hash_bytes::<ink::env::hash::Sha2x256>(js_code.as_bytes());
+                .hash_bytes::<ink::env::hash::Blake2x256>(js_code.as_bytes());
             let key = self.key();
             let signature =
                 pink::ext().sign(SigType::Sr25519, &key, &(code_hash, &output).encode());
