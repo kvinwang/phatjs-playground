@@ -74,6 +74,25 @@ mod proven {
             }
             Ok(proven_output)
         }
+
+        #[ink(message)]
+        /// Same as prove_output except getting the code from given URL.
+        pub fn prove_output2(
+            &self,
+            code_url: String,
+            args: Vec<String>,
+            submit_code: Option<String>,
+        ) -> Result<ProvenOutput, String> {
+            let response = pink::http_get!(
+                code_url,
+                alloc::vec![("User-Agent".into(), "phat-contract".into())]
+            );
+            if (response.status_code / 100) != 2 {
+                return Err("Failed to get code".into());
+            }
+            let js_code = String::from_utf8(response.body).map_err(|_| "Invalid code")?;
+            self.prove_output(js_code, args, submit_code)
+        }
     }
     impl Proven {
         /// Returns the derived key.
