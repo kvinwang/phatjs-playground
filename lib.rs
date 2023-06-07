@@ -45,14 +45,20 @@ mod proven {
             args: Vec<String>,
             submit_code: Option<String>,
         ) -> Result<ProvenOutput, String> {
-            let output = phat_js::eval(&js_code, &args)?;
+            let code_hash = self
+                .env()
+                .hash_bytes::<ink::env::hash::Blake2x256>(js_code.as_bytes());
+            let code_hash_str = hex::encode(code_hash);
+            let final_js_code = alloc::format!(
+                r#"(function(){{globalThis.thisCodeHash = "{code_hash_str}";}}());
+                {js_code}
+                "#
+            );
+            let output = phat_js::eval(&final_js_code, &args)?;
             let output = match output {
                 phat_js::Output::String(s) => s.into_bytes(),
                 phat_js::Output::Bytes(b) => b,
             };
-            let code_hash = self
-                .env()
-                .hash_bytes::<ink::env::hash::Blake2x256>(js_code.as_bytes());
             let key = self.key();
             let signature =
                 pink::ext().sign(SigType::Sr25519, &key, &(code_hash, &output).encode());
