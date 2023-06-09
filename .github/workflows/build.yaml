@@ -1,0 +1,55 @@
+name: Build contract
+
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-contract:
+    name: Build contract
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Install Rustc
+        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.69.0
+
+      - name: Install cargo-contract
+        run: cargo install cargo-contract
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Compile the contract
+        run: cargo contract build --release
+
+      - name: Upload the contract
+        uses: actions/upload-artifact@v2
+        with:
+          name: ink
+          path: target/ink/*
+
+  summarize:
+    needs: [build-contract]
+    name: Summarize
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          path: source
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: output
+
+      - name: Archive the source
+        run: tar -cf source.tar source
+
+      - name: Show the hash of the source as notation
+        run: echo "::info contract_source_hash=$(sha256sum source.tar | cut -d ' ' -f 1)"
+
+      - name: Show the code hash
+        run: echo "::info contract_code_hash=$(cat output/ink/*.json | jq .source.hash)"
