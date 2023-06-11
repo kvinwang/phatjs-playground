@@ -20,7 +20,7 @@ jobs:
         run: rm -rf source/.git
 
       - name: Archive the source
-        run: zip source.zip source
+        run: zip -r source.zip source
 
       - name: Show the hash of the source as notation
         run: echo "::notice title=witness.sourceCodeHash::$(sha256sum source.zip | cut -d ' ' -f 1)"
