@@ -9,16 +9,28 @@ extern crate alloc;
 mod proven {
     use alloc::string::String;
     use alloc::vec::Vec;
-    use pink::chain_extension::SigType;
+    use pink::{chain_extension::SigType, system::SystemRef, ConvertTo};
     use scale::{Decode, Encode};
+
+    #[derive(Encode, Decode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    /// Struct representing the signed payload.
+    pub struct ProvenPayload {
+        pub js_output: Vec<u8>,
+        pub js_code_hash: Hash,
+        pub js_engine_code_hash: Hash,
+        pub contract_code_hash: Hash,
+        pub contract_address: AccountId,
+        pub block_number: u32,
+    }
 
     #[derive(Encode, Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     /// Struct representing the output of a proven execution.
     pub struct ProvenOutput {
-        pub code_hash: [u8; 32],
-        pub output: Vec<u8>,
+        pub payload: ProvenPayload,
         pub signature: Vec<u8>,
+        pub signing_pubkey: Vec<u8>,
     }
 
     #[ink(storage)]
@@ -43,38 +55,38 @@ mod proven {
             &self,
             js_code: String,
             args: Vec<String>,
-            submit_code: Option<String>,
         ) -> Result<ProvenOutput, String> {
-            let code_hash = self
+            let js_code_hash = self
                 .env()
-                .hash_bytes::<ink::env::hash::Blake2x256>(js_code.as_bytes());
-            let code_hash_str = hex::encode(code_hash);
+                .hash_bytes::<ink::env::hash::Blake2x256>(js_code.as_bytes()).into();
+            let code_hash_str = hex::encode(js_code_hash);
             let final_js_code = alloc::format!(
                 r#"(function(){{globalThis.thisCodeHash = "{code_hash_str}";}}());
                 {js_code}
                 "#
             );
             let output = phat_js::eval(&final_js_code, &args)?;
-            let output = match output {
+            let js_output = match output {
                 phat_js::Output::String(s) => s.into_bytes(),
                 phat_js::Output::Bytes(b) => b,
             };
             let key = self.key();
-            let signature =
-                pink::ext().sign(SigType::Sr25519, &key, &(code_hash, &output).encode());
-            let proven_output = ProvenOutput {
-                code_hash,
-                output,
-                signature,
+            let js_delegate = SystemRef::instance().get_driver("JsDelegate".into()).expect("Failed to get JsDelegate driver");
+            let payload = ProvenPayload {
+                js_output,
+                js_code_hash,
+                js_engine_code_hash: js_delegate.convert_to(),
+                contract_code_hash: self.env().own_code_hash().expect("Failed to get contract code hash"),
+                contract_address: self.env().account_id(),
+                block_number: self.env().block_number(),
             };
-            if let Some(submit_code) = submit_code {
-                let code_hash = hex::encode(&proven_output.code_hash);
-                let out = hex::encode(&proven_output.output);
-                let sig = hex::encode(&proven_output.signature);
-                let args = alloc::vec![code_hash, out, sig];
-                let _ = phat_js::eval(&submit_code, &args)?;
-            }
-            Ok(proven_output)
+            let signature =
+                pink::ext().sign(SigType::Sr25519, &key, &payload.encode());
+            Ok(ProvenOutput {
+                payload,
+                signature,
+                signing_pubkey: self.pubkey(),
+            })
         }
 
         #[ink(message)]
@@ -83,7 +95,6 @@ mod proven {
             &self,
             code_url: String,
             args: Vec<String>,
-            submit_code: Option<String>,
         ) -> Result<ProvenOutput, String> {
             let response = pink::http_get!(
                 code_url,
@@ -93,9 +104,10 @@ mod proven {
                 return Err("Failed to get code".into());
             }
             let js_code = String::from_utf8(response.body).map_err(|_| "Invalid code")?;
-            self.prove_output(js_code, args, submit_code)
+            self.prove_output(js_code, args)
         }
     }
+
     impl Proven {
         /// Returns the key used to sign the execution result.
         fn key(&self) -> Vec<u8> {
