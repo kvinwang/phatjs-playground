@@ -50,10 +50,13 @@ jobs:
 
       - name: Archive the contract and show the hash
         run: |
-          cat output.json | jq -r '.dest_wasm, .metadata_result.dest_metadata, .metadata_result.dest_bundle' | zip -@ -j contract.zip
+          cat output.json | jq -r '.metadata_result.dest_metadata' | xargs -I % cp % metadata.json
+          cat output.json | jq -r '.dest_wasm, .metadata_result.dest_bundle' > contract_files.txt
+          echo metadata.json >> contract_files.txt
+          cat contract_files.txt | zip -@ -j contract.zip
           echo "::notice title=witness.contractPackageHash::$(sha256sum contract.zip | cut -d ' ' -f 1)"
-          cat output.json | jq -r '.metadata_result.dest_metadata' | xargs jq -r '.source.hash' > contract_code_hash
-          echo "::notice title=witness.contractWasmCodeHash::$(cat contract_code_hash)"
+          echo "::notice title=witness.contractMetadataHash::$(sha256sum metadata.json | cut -d ' ' -f 1)"
+          echo "::notice title=witness.contractWasmCodeHash::$(cat metadata.json | xargs jq -r '.source.hash')"
 
       - name: Upload the contract
         uses: actions/upload-artifact@v2
