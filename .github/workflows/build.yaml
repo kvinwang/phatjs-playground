@@ -7,32 +7,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build-contract:
-    name: Build contract
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Install Rustc
-        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.69.0
-
-      - name: Install cargo-contract
-        run: cargo install cargo-contract
-
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
-
-      - name: Compile the contract
-        run: cargo contract build --release
-
-      - name: Upload the contract
-        uses: actions/upload-artifact@v2
-        with:
-          name: ink
-          path: target/ink/*
-
-  summarize:
-    needs: [build-contract]
-    name: Summarize
+  emit-source-info:
+    name: Source information
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -40,16 +16,47 @@ jobs:
           submodules: true
           path: source
 
-      - name: Download artifacts
-        uses: actions/download-artifact@v3
-        with:
-          path: output
+      - name: Remove the git objects
+        run: rm -rf source/.git
 
       - name: Archive the source
-        run: tar -cf source.tar source
+        run: zip source.zip source
 
       - name: Show the hash of the source as notation
-        run: echo "::info contract_source_hash=$(sha256sum source.tar | cut -d ' ' -f 1)"
+        run: echo "::notice title=witness.sourceCodeHash::$(sha256sum source.zip | cut -d ' ' -f 1)"
 
-      - name: Show the code hash
-        run: echo "::info contract_code_hash=$(cat output/ink/*.json | jq .source.hash)"
+      - name: Uplaod source code
+        uses: actions/upload-artifact@v2
+        with:
+          name: Source code
+          path: source.zip
+
+  build-contract:
+    name: Build contract
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Install Rust toolchain
+        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+      - name: Install cargo-contract
+        run: cargo install cargo-contract --version=^3
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Compile the contract
+        run: cargo contract build --release --output-json | tee output.json
+
+      - name: Archive the contract and show the hash
+        run: |
+          cat output.json | jq -r '.dest_wasm, .metadata_result.dest_metadata, .metadata_result.dest_bundle' | zip -@ -j contract.zip
+          echo "::notice title=witness.contractPackageHash::$(sha256sum contract.zip | cut -d ' ' -f 1)"
+          cat output.json | jq -r '.metadata_result.dest_metadata' | xargs jq -r '.source.hash' > contract_code_hash
+          echo "::notice title=witness.contractWasmCodeHash::$(cat contract_code_hash)"
+
+      - name: Upload the contract
+        uses: actions/upload-artifact@v2
+        with:
+          name: ink
+          path: contract.zip
