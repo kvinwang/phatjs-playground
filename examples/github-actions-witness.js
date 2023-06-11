@@ -76,15 +76,15 @@ function witnessActionRun(url, token) {
     const workflowFile = githubApiGet(`${action.baseFileUrl}${path}?ref=${head_sha}`, token, true);
     const workflowHash = hex(pink.hash("sha256", workflowFile));
     const jobs = githubApiGet(action.jobsUrl, token);
-    const notes = jobs.jobs.flatMap((job, jobIndex) => {
+    const notes = jobs.jobs.flatMap(job => {
         const { name, check_run_url } = job;
+        const PREFIX = 'witness.';
         return githubApiGet(`${check_run_url}/annotations`, token)
-            .filter(annotation => annotation.title.startsWith('witness.'))
+            .filter(annotation => annotation.title.startsWith(PREFIX))
             .map(({ title, message }) => ({
-                jobIndex,
+                title: title.slice(PREFIX.length),
+                value: message,
                 jobName: name,
-                title,
-                message
             }));
     });
     return JSON.stringify({
