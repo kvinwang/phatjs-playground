@@ -1,5 +1,5 @@
 function hex(bytes) {
-    return Array.from(bytes, function (byte) {
+    return '0x' + Array.from(bytes, function (byte) {
         return ('0' + (byte & 0xFF).toString(16)).slice(-2);
     }).join('');
 }
