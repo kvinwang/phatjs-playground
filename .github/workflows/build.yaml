@@ -1,4 +1,4 @@
-name: Build contract
+name: Build contracts - Witnessed
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ env:
 jobs:
   emit-source-info:
     name: Source information
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
@@ -23,17 +23,17 @@ jobs:
         run: zip -r source.zip source
 
       - name: Show the hash of the source as notation
-        run: echo "::notice title=witness.sourceCodeHash::$(sha256sum source.zip | cut -d ' ' -f 1)"
+        run: echo "::notice title=witness.sourceCodeHash::0x$(sha256sum source.zip | cut -d ' ' -f 1)"
 
       - name: Uplaod source code
         uses: actions/upload-artifact@v2
         with:
-          name: Source code
+          name: Source
           path: source.zip
 
-  build-contract:
-    name: Build contract
-    runs-on: ubuntu-20.04
+  build-contracts:
+    name: Build contracts
+    runs-on: ubuntu-latest
     steps:
       - name: Install Rust toolchain
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -45,21 +45,11 @@ jobs:
         with:
           submodules: true
 
-      - name: Compile the contract
-        run: cargo contract build --release --output-json | tee output.json
-
-      - name: Archive the contract and show the hash
-        run: |
-          cat output.json | jq -r '.metadata_result.dest_metadata' | xargs -I % cp % metadata.json
-          cat output.json | jq -r '.dest_wasm, .metadata_result.dest_bundle' > contract_files.txt
-          echo metadata.json >> contract_files.txt
-          cat contract_files.txt | zip -@ -j contract.zip
-          echo "::notice title=witness.contractPackageHash::$(sha256sum contract.zip | cut -d ' ' -f 1)"
-          echo "::notice title=witness.contractMetadataHash::$(sha256sum metadata.json | cut -d ' ' -f 1)"
-          echo "::notice title=witness.contractWasmCodeHash::$(cat metadata.json | xargs jq -r '.source.hash')"
+      - name: Build contracts
+        run: ./witnessed-build
 
       - name: Upload the contract
         uses: actions/upload-artifact@v2
         with:
-          name: ink
-          path: contract.zip
+          name: Contracts
+          path: .witness/*.zip

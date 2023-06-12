@@ -1,0 +1,20 @@
+#!/bin/sh
+set -e
+
+build_contract() {
+    echo "Building contract in $PWD"
+    rm -rf .witness && mkdir -p .witness
+    RUST_LOG=error cargo contract build --release --output-json | tee .witness/output.json
+    cd .witness
+    jq -r '.metadata_result.dest_metadata' output.json | xargs -I % cp % metadata.json
+    jq -r '.dest_wasm, .metadata_result.dest_bundle' output.json > contract_files.txt
+    echo metadata.json >> contract_files.txt
+    contract_name=$(jq -r '.contract.name' metadata.json)
+    jq -r '.source.hash' metadata.json > contract_hash
+    cat contract_files.txt | zip -@ -j $contract_name.zip
+    echo "::notice title=witness.contract.$contract_name.packageHash::0x$(sha256sum $contract_name.zip | cut -d ' ' -f 1)"
+    echo "::notice title=witness.contract.$contract_name.metadataHash::0x$(sha256sum metadata.json | cut -d ' ' -f 1)"
+    echo "::notice title=witness.contract.$contract_name.wasmCodeHash::$(cat contract_hash)"
+}
+
+build_contract
