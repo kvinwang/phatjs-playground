@@ -1,6 +1,16 @@
 #!/bin/sh
 set -e
 
+install_toolchain() {
+  echo "::group::Installing Rust"
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  echo "::endgroup::"
+  PATH="$HOME/.cargo/bin:$PATH"
+  echo "::group::Installing cargo-contract"
+  cargo install cargo-contract --version=^3
+  echo "::endgroup::"
+}
+
 build_contract() {
     echo "Building contract in $PWD"
     rm -rf .witness && mkdir -p .witness
@@ -17,5 +27,9 @@ build_contract() {
     echo "::notice title=witness.contract.$contract_name.wasmCodeHash::$(cat contract_hash)"
     cp $contract_name.zip $WITNESS_DIST_DIR/
 }
+
+if [ "$1" = "-i" ]; then
+  install_toolchain
+fi
 
 build_contract

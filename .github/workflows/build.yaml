@@ -1,4 +1,4 @@
-name: Build contracts - Witnessed
+name: Witnessed build
 
 on:
   workflow_dispatch:
@@ -11,7 +11,8 @@ jobs:
     name: Source information
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout the source
+        uses: actions/checkout@v3
         with:
           submodules: true
           path: source
@@ -31,29 +32,24 @@ jobs:
           name: Source
           path: source.zip
 
-  build-contracts:
-    name: Build contracts
+  build:
+    name: Build
     runs-on: ubuntu-latest
     env:
       WITNESS_DIST_DIR: ${{ github.workspace }}/.witness/dist
     steps:
-      - name: Install Rust toolchain
-        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-
-      - name: Install cargo-contract
-        run: cargo install cargo-contract --version=^3
-
-      - uses: actions/checkout@v3
+      - name: Checkout the source
+        uses: actions/checkout@v3
         with:
           submodules: true
 
-      - name: Build contracts
+      - name: Witnessed build
         run: |
           mkdir -p "$WITNESS_DIST_DIR"
-          ./witnessed-build
+          ./witnessed-build -i
 
-      - name: Upload the contract
+      - name: Upload the outputs
         uses: actions/upload-artifact@v2
         with:
-          name: Contracts
-          path: "${{ env.WITNESS_DIST_DIR }}/*.zip"
+          name: Outputs
+          path: "${{ env.WITNESS_DIST_DIR }}/*"
