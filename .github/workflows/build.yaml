@@ -34,6 +34,8 @@ jobs:
   build-contracts:
     name: Build contracts
     runs-on: ubuntu-latest
+    env:
+      WITNESS_DIST_DIR: ${{ github.workspace }}/.witness/dist
     steps:
       - name: Install Rust toolchain
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -46,10 +48,12 @@ jobs:
           submodules: true
 
       - name: Build contracts
-        run: ./witnessed-build
+        run: |
+          mkdir -p "$WITNESS_DIST_DIR"
+          ./witnessed-build
 
       - name: Upload the contract
         uses: actions/upload-artifact@v2
         with:
           name: Contracts
-          path: .witness/*.zip
+          path: "${{ env.WITNESS_DIST_DIR }}/*.zip"
