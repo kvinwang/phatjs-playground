@@ -30,13 +30,13 @@ let js_code = r#"
 "#;
 
 let ProvenOutput {
-    code_hash,
-    output,
+    payload,
     signature,
+    signer_pubkey,
 } = contract.prove_output(js_code, vec!["<Your Github Access Token>".into(), "Moon".into()]).unwrap();
 
 let pubkey = contract.pubkey();
-assert!(sr25519::verify(&pubkey, &signature, &(&code_hash, &output).encode()).is_ok());
+assert!(sr25519::verify(&pubkey, &signature, &payload.encode()).is_ok());
 ```
 
 ## Application Scenario
