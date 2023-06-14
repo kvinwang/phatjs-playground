@@ -58,10 +58,21 @@ mod proven {
         ) -> Result<ProvenOutput, String> {
             let js_code_hash = self
                 .env()
-                .hash_bytes::<ink::env::hash::Blake2x256>(js_code.as_bytes()).into();
+                .hash_bytes::<ink::env::hash::Blake2x256>(js_code.as_bytes())
+                .into();
             let code_hash_str = hex::encode(js_code_hash);
+            let caller = hex::encode(self.env().caller());
+            let address = hex::encode(self.env().account_id());
+            let block_number = self.env().block_number();
+            let block_time = self.env().block_timestamp();
             let final_js_code = alloc::format!(
-                r#"(function(){{globalThis.thisCodeHash = "{code_hash_str}";}}());
+                r#"globalThis.env = {{
+                       jsCodeHash: "0x{code_hash_str}",
+                       caller: "0x{caller}",
+                       address: "0x{address}",
+                       blockNumber: {block_number},
+                       blockTimestamp: {block_time},
+                   }};
                 {js_code}
                 "#
             );
@@ -71,17 +82,21 @@ mod proven {
                 phat_js::Output::Bytes(b) => b,
             };
             let key = self.key();
-            let js_delegate = SystemRef::instance().get_driver("JsDelegate".into()).expect("Failed to get JsDelegate driver");
+            let js_delegate = SystemRef::instance()
+                .get_driver("JsDelegate".into())
+                .expect("Failed to get JsDelegate driver");
             let payload = ProvenPayload {
                 js_output,
                 js_code_hash,
                 js_engine_code_hash: js_delegate.convert_to(),
-                contract_code_hash: self.env().own_code_hash().expect("Failed to get contract code hash"),
+                contract_code_hash: self
+                    .env()
+                    .own_code_hash()
+                    .expect("Failed to get contract code hash"),
                 contract_address: self.env().account_id(),
                 block_number: self.env().block_number(),
             };
-            let signature =
-                pink::ext().sign(SigType::Sr25519, &key, &payload.encode());
+            let signature = pink::ext().sign(SigType::Sr25519, &key, &payload.encode());
             Ok(ProvenOutput {
                 payload,
                 signature,

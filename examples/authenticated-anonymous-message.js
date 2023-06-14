@@ -26,6 +26,7 @@ function githubApiGet(url, token) {
         body: JSON.parse(response.body),
     };
 }
+
 (function () {
     const token = scriptArgs[0];
     const message = scriptArgs[1];
@@ -34,7 +35,7 @@ function githubApiGet(url, token) {
     if (authorized_github_accounts.indexOf(user.login) === -1) {
         throw new Error(`Unauthorized github user ${user.login}`);
     }
-    const userFingerPrint = pink.deriveSecret(`${user.login}@github|${thisCodeHash}`);
+    const userFingerPrint = pink.deriveSecret(`${user.login}@github|${env.jsCodeHash}`);
     const id = hex(pink.hash('sha256', userFingerPrint)).slice(0, 16);
     return `User ${id}: ${message} - ${date}`;
 }())
