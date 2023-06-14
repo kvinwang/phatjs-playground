@@ -76,6 +76,7 @@ mod proven {
                 {js_code}
                 "#
             );
+            drop(js_code); // Drop the original js_code to save memory
             let output = phat_js::eval(&final_js_code, &args)?;
             let js_output = match output {
                 phat_js::Output::String(s) => s.into_bytes(),
