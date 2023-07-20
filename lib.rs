@@ -51,6 +51,14 @@ mod proven {
         #[ink(message)]
         /// Executes the provided JavaScript code and returns the execution result and the hash of the code.
         /// The output is signed with dedicated private key.
+        ///
+        /// # Arguments
+        ///
+        /// * `js_code` - The Javascript code to run
+        /// * `args` - The arguments to pass to the Javascript code
+        ///
+        /// @ui js_code widget codemirror
+        /// @ui js_code options.lang javascript
         pub fn prove_output(
             &self,
             js_code: String,
