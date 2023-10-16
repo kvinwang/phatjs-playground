@@ -1,13 +1,13 @@
 [package]
-name = "proven"
+name = "playground"
 version = "0.1.0"
 authors = ["Kevin Wang <wy721@qq.com>"]
 edition = "2021"
 
 [dependencies]
-ink = { version = "4.2.0", default-features = false }
+ink = { version = "4.3.0", default-features = false, features = ["static-buffer-256K"]}
 pink = { package = "pink-extension", version = "0.4", default-features = false, features = ["dlmalloc"] }
-phat_js = { version = "0.1", default-features = false }
+phat_js = { version = "0.2.0-dev.1", default-features = false }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = [
@@ -28,3 +28,6 @@ default = ["std"]
 std = ["ink/std", "scale/std", "scale-info/std", "pink/std", "phat_js/std"]
 ink-as-dependency = []
 e2e-tests = []
+
+[patch.crates-io]
+ink = { git = "https://github.com/kvinwang/ink", branch = "config-buffer-4.3.0" }
