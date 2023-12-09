@@ -9,13 +9,13 @@ mod playground {
     use alloc::vec;
     use alloc::vec::Vec;
     use phat_js as js;
-    use pink::chain_extension::{JsCode, JsValue};
     use scale::{Decode, Encode};
 
     #[derive(Debug, Encode, Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum JsEngine {
         SidevmQuickJS,
+        SidevmQuickJSWithPolyfill,
         JsDelegate,
         JsDelegate2,
         CustomDriver(String),
@@ -26,6 +26,7 @@ mod playground {
         fn into_delegate_code_hash(self) -> Result<Hash, String> {
             match self {
                 JsEngine::SidevmQuickJS => get_driver("JsRuntime"),
+                JsEngine::SidevmQuickJSWithPolyfill => get_driver("JsRuntime"),
                 JsEngine::JsDelegate => get_driver("JsDelegate"),
                 JsEngine::JsDelegate2 => get_driver("JsDelegate2"),
                 JsEngine::CustomDriver(name) => get_driver(&name),
@@ -33,7 +34,13 @@ mod playground {
             }
         }
         fn is_sidevm(&self) -> bool {
-            matches!(self, JsEngine::SidevmQuickJS)
+            matches!(
+                self,
+                JsEngine::SidevmQuickJS | JsEngine::SidevmQuickJSWithPolyfill
+            )
+        }
+        fn with_polyfill(&self) -> bool {
+            matches!(self, JsEngine::SidevmQuickJSWithPolyfill)
         }
     }
 
@@ -62,20 +69,15 @@ mod playground {
             engine: JsEngine,
             js_code: String,
             args: Vec<String>,
-        ) -> Result<js::Output, String> {
+        ) -> Result<js::JsValue, String> {
             if engine.is_sidevm() {
-                let result = pink::ext().js_eval(vec![JsCode::Source(js_code)], args);
-                let output = match result {
-                    JsValue::Undefined => js::Output::Undefined,
-                    JsValue::Null => js::Output::Undefined,
-                    JsValue::String(val) => js::Output::String(val),
-                    JsValue::Bytes(val) => js::Output::Bytes(val),
-                    JsValue::Other(val) => js::Output::String(val),
-                    JsValue::Exception(err) => return Err(err),
-                };
-                Ok(output)
+                if engine.with_polyfill() {
+                    Ok(js::eval_async_js(js::JsCode::Source(js_code), args))
+                } else {
+                    Ok(pink::ext().js_eval(vec![js::JsCode::Source(js_code)], args))
+                }
             } else {
-                js::eval_with(engine.into_delegate_code_hash()?, &js_code, &args)
+                js::eval_with(engine.into_delegate_code_hash()?, &js_code, &args).map(Into::into)
             }
         }
 
@@ -86,7 +88,7 @@ mod playground {
             engine: JsEngine,
             code_url: String,
             args: Vec<String>,
-        ) -> Result<js::Output, String> {
+        ) -> Result<js::JsValue, String> {
             let response = pink::http_get!(
                 code_url,
                 alloc::vec![("User-Agent".into(), "phat-contract".into())]
