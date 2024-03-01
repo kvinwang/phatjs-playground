@@ -2524,7 +2524,9 @@ checksum = "9b2a4787296e9989611394c33f193f676704af1686e70b8f8033ab5ba9a35a94"
 
 [[package]]
 name = "phat_js"
-version = "0.2.7"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fadbc0bec0391f21aa3d076b1f3bd6408034884336c28cd121c8b39dc173b5a"
 dependencies = [
  "hex_fmt",
  "ink",
@@ -2611,7 +2613,7 @@ dependencies = [
 
 [[package]]
 name = "playground"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "hex",
  "ink",

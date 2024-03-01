@@ -72,7 +72,7 @@ mod playground {
         ) -> Result<js::JsValue, String> {
             if engine.is_sidevm() {
                 if engine.with_polyfill() {
-                    Ok(js::eval_async_js(js::JsCode::Source(js_code), args))
+                    Ok(js::eval_async_js(&js_code, &args))
                 } else {
                     Ok(pink::ext().js_eval(vec![js::JsCode::Source(js_code)], args))
                 }

@@ -1,11 +1,11 @@
 [package]
 name = "playground"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Kevin Wang <wy721@qq.com>"]
 edition = "2021"
 
 [dependencies]
-ink = { version = "4.3.0", default-features = false, features = ["static-buffer-256K"]}
+ink = { version = "4.3.0", default-features = false, features = ["static-buffer-1M256K"]}
 pink = { package = "pink-extension", version = "0.5.1", default-features = false, features = ["dlmalloc"] }
 phat_js = { version = "0.2.7", default-features = false }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
